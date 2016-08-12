@@ -19,6 +19,7 @@ The sendall below can be used for larger texts/requests and lists:
 
 client = socket.create_connection((target_host, target_port))
 client.sendall('GET / HTTP/1.1\r\nHost: google.com\r\n\r\n'.encode('ascii'))
+
 """
 
 response = client.recv(4096)
