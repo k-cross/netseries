@@ -54,6 +54,16 @@ class ICMP(Structure):
     def __init__(self, socket_buffer):
         pass
 
+def udp_sender(subnet, send_message):
+    time.sleep(5)
+    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    for ip in IPNetwork(subnet):
+        try:
+            sender.sendto(send_message.encode('UTF-8'), ('%s' % ip, 65212))
+        except:
+            pass
+
 # Host to listen on
 def main():
     try:
@@ -62,9 +72,11 @@ def main():
             subnet = sys.argv[2]
         else:
             host = '192.168.1.119'
-            subnet = '192.168.0.0/24'
+            subnet = '192.168.1.0/24'
     except Exception:
         print('[!] Invalid number of parameters')
+
+    send_message = 'Welcome to Earth!'
 
     # create raw socket and bind to public interface
     if os.name == 'nt':
@@ -73,6 +85,12 @@ def main():
         socket_protocol = socket.IPPROTO_ICMP
 
     print('[*] Starting')
+    print(subnet, send_message)
+
+    # Start new thread for sending packets
+    t = threading.Thread(target=udp_sender, args=(subnet, send_message))
+    t.daemon = False
+    t.start()
 
     try:
         sniffer = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket_protocol)
@@ -90,16 +108,17 @@ def main():
             # Create IP header from the buffer's first 20 bytes, passing in 32 bytes because of from_buffer_copy error
             ip_header = IP(raw_buffer)
 
-            # Print detected host and protocol
-            print('Protocol: %s %s -> %s' % (ip_header.protocol, ip_header.src_address, ip_header.dst_address))
-
             if ip_header.protocol == 'ICMP':
                 # Calculate location of ICMP in packet
                 offset = ip_header.ihl * 4
                 buf = raw_buffer[offset:offset + sizeof(ICMP)]
                 icmp_header = ICMP(buf)
 
-                print('ICMP -> Type: %d Code: %d' % (icmp_header.type, icmp_header.code))
+                if icmp_header.code == 3 and icmp_header.type == 3:
+                    # Checks host is in target subnet
+                    if IPAddress(ip_header.src_address) in IPNetwork(subnet):
+                        print('Host Up: %s' % ip_header.src_address)
+
 
 
     except KeyboardInterrupt:
