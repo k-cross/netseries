@@ -68,11 +68,19 @@ def main():
 
     gateway_mac = get_mac(gateway_ip)
 
-    if gateway_mac == None:
+    try:
+        if gateway_mac != None:
+            print('[*] Gateway %s is at %s' % (gateway_ip, gateway_mac))
+    except Exception:
         print('[!] Failed to obtain Gateway MAC: Exiting')
         sys.exit(0)
-    else:
-        print('[*] Gateway %s is at %s' % (gateway_ip, gateway_mac))
+
+
+    #if gateway_mac == None:
+    #    print('[!] Failed to obtain Gateway MAC: Exiting')
+    #    sys.exit(0)
+    #else:
+    #    print('[*] Gateway %s is at %s' % (gateway_ip, gateway_mac))
 
     target_mac = get_mac(target_ip)
 
